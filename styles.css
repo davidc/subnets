@@ -1,0 +1,52 @@
+h1 {
+  font-family: Arial, Verdana, sans-serif;
+  font-size: 18pt;
+}
+
+body {
+  font-family: Arial, Verdana, sans-serif;
+}
+
+p {
+  font-family: Arial, Verdana, sans-serif;
+  font-size: 75%;
+}
+
+.label {
+  font-family: Arial, Verdana, sans-serif;
+  font-size: 60%;
+}
+
+.calc {
+  font-family: Arial, Verdana, sans-serif;
+  font-size: 80%;
+  border-collapse: collapse; 
+}
+.calc td {
+ border: 1px solid black;
+}
+
+.calc thead {
+  font-weight: bold;
+  background-color: #eeeeee;
+}
+
+.disabledAction {
+ color: #dddddd;
+}
+
+.maskSpan {
+  background-color: #cccccc;
+  text-align: right;
+}
+.maskSpanJoinable {
+  background-color: #cccccc;
+  text-align: right;
+ cursor: hand;
+}
+
+.maskSpanRotate {
+ filter:progid:DXImageTransform.Microsoft.BasicImage(rotation=1);
+ background-color:green;
+}
+
