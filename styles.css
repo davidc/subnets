@@ -1,6 +1,6 @@
 h1 {
   font-family: 'Lato', sans-serif;
-  font-size: 18pt;
+  font-size: 140%;
 }
 
 body {
@@ -15,7 +15,6 @@ p {
 hr {
   border-bottom: 1px solid #fff;
   border-top: 1px solid #8c8b8b;
-  size: 1;
 }
 
 .calc {
@@ -26,17 +25,18 @@ hr {
 
 .calc td {
   border: 1px solid black;
+  padding: 5px;
 }
 
 .calc thead {
   background-color: #eeeeee;
   font-family: 'Lato', sans-serif;
-  font-size:  100%;
+  font-size:  120%;
   font-weight: bold;
 }
 
 .disabledAction {
- color: #dddddd;
+  color: red;
 }
 
 .maskSpan {
@@ -94,14 +94,15 @@ hr {
 }
 
 input[type=button], input[type=submit], input[type=reset] {
-    border: none;
-    color: white;
-    cursor: pointer;
-    font-family: 'Lato', sans-serif;
-    font-weight: bold;
-    margin: 4px 2px;
-    padding: 8px 8px;
-    text-decoration: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-family: 'Lato', sans-serif;
+  font-size: 90%;
+  font-weight: bold;
+  margin: 4px 2px;
+  padding: 8px 8px;
+  text-decoration: none;
 }
 
 input[type=submit] {
@@ -110,5 +111,10 @@ input[type=submit] {
 
 input[type=button], input[type=reset] {
   background-color: red;
+}
+
+input[type=text] {
+  font-family: 'Source Code Pro', sans-serif;
+  font-size: 90%;
 }
 
