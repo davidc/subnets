@@ -421,18 +421,4 @@ function parseQueryString (str)
 
 window.onload = calcOnLoad;
 
-function toggleColumn(cb)
-{
-  var colName = 'col_'+(cb.id.substr(3));
-  var col = document.getElementById(colName);
-
-  if (cb.checked) {
-    col.style.display = 'block';
-  }
-  else {
-    col.style.display = 'none';
-  }
-  recreateTables(); /* because IE draws lines all over the place with border-collapse */
-}
-
 //-->
