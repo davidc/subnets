@@ -1,5 +1,3 @@
-<!--
-
 var curNetwork = 0;
 var curMask = 0;
 
@@ -418,7 +416,3 @@ function parseQueryString (str)
   }
   return args;
 }
-
-window.onload = calcOnLoad;
-
-//-->
