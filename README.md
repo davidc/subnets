@@ -1,2 +1,2 @@
 # subnets
-Visual subnet calculator as seen at http://www.davidc.net/sites/default/subnets/subnets.html
+Forked copy of a Visual subnet calculator. Original seen at http://www.davidc.net/sites/default/subnets/subnets.html
