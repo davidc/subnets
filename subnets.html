@@ -1,8 +1,9 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
+<meta charset="utf-8"/>
 <title>Visual Subnet Calculator</title>
 <script language="javascript" type="text/javascript">
-<!--
 
 var curNetwork = 0;
 var curMask = 0;
@@ -182,6 +183,7 @@ function createRow(calcbody, node, address, mask, labels, depth)
 
     /* subnet address */
     var newCell = document.createElement('TD');
+    newCell.classList.add("col_subnet");
     newCell.appendChild(document.createTextNode(inet_ntoa(address)+'/'+mask));
     newRow.appendChild(newCell);
 
@@ -213,21 +215,25 @@ function createRow(calcbody, node, address, mask, labels, depth)
 
     /* netmask */
     var newCell = document.createElement('TD');
+    newCell.classList.add("col_netmask");
     newCell.appendChild(document.createTextNode(inet_ntoa(subnet_netmask(mask))));
     newRow.appendChild(newCell);
 
     /* range of addresses */
     var newCell = document.createElement('TD');
+    newCell.classList.add("col_range");
     newCell.appendChild(document.createTextNode(addressRange));
     newRow.appendChild(newCell);
 
     /* useable addresses */
     var newCell = document.createElement('TD');
+    newCell.classList.add("col_useable");
     newCell.appendChild(document.createTextNode(useableRange));
     newRow.appendChild(newCell);
 
     /* Hosts */
     var newCell = document.createElement('TD');
+    newCell.classList.add("col_hosts");
     newCell.appendChild(document.createTextNode(numHosts));
     newRow.appendChild(newCell);
 
@@ -257,6 +263,7 @@ function createRow(calcbody, node, address, mask, labels, depth)
       }
     }))(mask, address); // keep some vars in scope
 
+    newCell.classList.add("col_comments");
     textarea.innerText = comment;
     newCell.appendChild(textarea);
     newRow.appendChild(newCell);
@@ -279,6 +286,7 @@ function createRow(calcbody, node, address, mask, labels, depth)
       newLink.appendChild(document.createTextNode('Divide'));
       newCell.appendChild(newLink);
     }
+    newCell.classList.add("col_divide");
 
     var colspan = depth - node[0];
 
@@ -288,17 +296,17 @@ function createRow(calcbody, node, address, mask, labels, depth)
       var joinnode = labels[(i*3)+2];
 
       var newCell = document.createElement('TD');
+      newCell.classList.add("col_join")
       newCell.rowSpan = (rowspan > 1 ? rowspan : 1);
       newCell.colSpan = (colspan > 1 ? colspan : 1);
       newCell.id = "join_" + inet_ntoa(network_address(address, mask)) + "/" + mask;
 
-      if (i == (labels.length/3)-1) {
-	newCell.className = 'maskSpan';
+      if (i == (labels.length/3)-1 || comment != null) {
+        newCell.classList.add("maskSpan")
       }
       else {
-	newCell.className = 'maskSpanJoinable';
-	newCell.onclick = newJoin(joinnode);
-	//	newCell.onmouseover = function() { window.status = joinnode[0]+'---'+joinnode[1]+'---'+joinnode[2]+'>>>>>'+node[2];}
+        newCell.classList.add("maskSpanJoinable")
+        newCell.onclick = newJoin(joinnode);
       }
 
       var newImg = document.createElement('IMG');
@@ -496,15 +504,15 @@ window.onload = calcOnLoad;
 
 function toggleColumn(cb)
 {
-  var colName = 'col_'+(cb.id.substr(3));
-  var col = document.getElementById(colName);
+  var cssName = '--display-'+(cb.id.substr(3));
 
   if (cb.checked) {
-    col.style.display = 'block';
+    document.documentElement.style.setProperty(cssName, null);
   }
   else {
-    col.style.display = 'none';
+    document.documentElement.style.setProperty(cssName, 'none');
   }
+
   recreateTables(); /* because IE draws lines all over the place with border-collapse */
 }
 
@@ -512,6 +520,26 @@ function toggleColumn(cb)
 </script>
 
 <style type="text/css">
+
+:root {
+  --display-subnet:   table-cell;
+  --display-netmask:  table-cell;
+  --display-range:    table-cell;
+  --display-useable:  table-cell;
+  --display-hosts:    table-cell;
+  --display-comments: table-cell;
+  --display-divide:   table-cell;
+  --display-join:     table-cell;
+}
+
+.col_subnet   { display: var(--display-subnet); }
+.col_netmask  { display: var(--display-netmask); }
+.col_range    { display: var(--display-range); }
+.col_useable  { display: var(--display-useable); }
+.col_hosts    { display: var(--display-hosts); }
+.col_comments { display: var(--display-comments); }
+.col_divide   { display: var(--display-divide); }
+.col_join     { display: var(--display-join); }
 
 H1		{
   font-family: Arial, Verdana, sans-serif;
@@ -526,7 +554,6 @@ P		{
   font-family: Arial, Verdana, sans-serif;
   font-size: 75%;
 }
-
 
 .label		{
   font-family: Arial, Verdana, sans-serif;
@@ -599,14 +626,14 @@ P		{
 </table>
 
 <p>Show columns:
-<input type="checkbox" id="cb_subnet" checked onclick="toggleColumn(this)"><label for="cb_subnet">Subnet address</label>
-<input type="checkbox" id="cb_netmask" onclick="toggleColumn(this)"><label for="cb_netmask">Netmask</label>
-<input type="checkbox" id="cb_range" checked onclick="toggleColumn(this)"><label for="cb_range">Range of addresses</label>
-<input type="checkbox" id="cb_useable" checked onclick="toggleColumn(this)"><label for="cb_useable">Useable IPs</label>
-<input type="checkbox" id="cb_hosts" checked onclick="toggleColumn(this)"><label for="cb_hosts">Hosts</label>
-<input type="checkbox" id="cb_comments" checked onclick="toggleColumn(this)"><label for="cb_comments">Comments</label>
-<input type="checkbox" id="cb_divide" checked onclick="toggleColumn(this)"><label for="cb_divide">Divide</label>
-<input type="checkbox" id="cb_join" checked onclick="toggleColumn(this)"><label for="cb_join">Join</label>
+<input type="checkbox" id="cb_subnet"   checked  onclick="toggleColumn(this)"><label for="cb_subnet">Subnet address</label>
+<input type="checkbox" id="cb_netmask"  checked  onclick="toggleColumn(this)"><label for="cb_netmask">Netmask</label>
+<input type="checkbox" id="cb_range"    checked  onclick="toggleColumn(this)"><label for="cb_range">Range of addresses</label>
+<input type="checkbox" id="cb_useable"  checked  onclick="toggleColumn(this)"><label for="cb_useable">Useable IPs</label>
+<input type="checkbox" id="cb_hosts"    checked  onclick="toggleColumn(this)"><label for="cb_hosts">Hosts</label>
+<input type="checkbox" id="cb_comments" checked  onclick="toggleColumn(this)"><label for="cb_comments">Comments</label>
+<input type="checkbox" id="cb_divide"   checked  onclick="toggleColumn(this)"><label for="cb_divide">Divide</label>
+<input type="checkbox" id="cb_join"     checked  onclick="toggleColumn(this)"><label for="cb_join">Join</label>
 </p>
 </form>
 
@@ -627,7 +654,7 @@ If you wish to save this subnetting for later, bookmark <a href="subnets.html" i
 <table class="calc" cellspacing="0" cellpadding="2">
 <colgroup>
 <col id="col_subnet">
-<col id="col_netmask" style="display: none">
+<col id="col_netmask">
 <col id="col_range">
 <col id="col_useable">
 <col id="col_hosts">
@@ -637,14 +664,14 @@ If you wish to save this subnetting for later, bookmark <a href="subnets.html" i
 </colgroup>
 <thead>
 <tr>
-<td>Subnet address</td>
-<td>Netmask</td>
-<td>Range of addresses</td>
-<td>Useable IPs</td>
-<td>Hosts</td>
-<td>Comments</td>
-<td>Divide</td>
-<td id="joinHeader">Join</td>
+<td class="col_subnet"   >Subnet address</td>
+<td class="col_netmask"  >Netmask</td>
+<td class="col_range"    >Range of addresses</td>
+<td class="col_useable"  >Useable IPs</td>
+<td class="col_hosts"    >Hosts</td>
+<td class="col_comments" >Comments</td>
+<td class="col_divide"   >Divide</td>
+<td class="col_join"      id="joinHeader">Join</td>
 </tr>
 </thead>
 <tbody id="calcbody">
