@@ -437,10 +437,15 @@ function calcOnLoad()
 {
   preloadSubnetImages();
   args = parseQueryString();
-  if (args['network'] && args['mask'] && args['division'] && args['comments']) {
+  if (args['network'] && args['mask'] && args['division']) {
     document.forms['calc'].elements['network'].value = args['network'];
     document.forms['calc'].elements['netbits'].value = args['mask'];
-    curComments = JSON.parse(args['comments']);
+
+    if (args['comments']) {
+      curComments = JSON.parse(args['comments']);
+    } else {
+      curComments = {};
+    }
     updateNetwork();
     var division = asciiToBin(args['division']);
     rootSubnet = [0, 0, null];
