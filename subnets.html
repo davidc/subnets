@@ -105,10 +105,10 @@ function recreateTables()
 function createBookmarkHyperlink() {
   var link = document.getElementById('saveLink');
   if (link) {
-    link.href = 'subnets.html?network='+inet_ntoa(curNetwork)
+    link.href = '?network='+inet_ntoa(curNetwork)
                +'&mask='+curMask
                +'&division='+binToAscii(nodeToString(rootSubnet))
-               +'&comments='+JSON.stringify(curComments);
+               +'&comments='+encodeURIComponent(JSON.stringify(curComments));
   }
 }
 
