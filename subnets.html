@@ -93,10 +93,10 @@ function recreateTables()
 
   for (var lock in joinLocks) {
     let joinElement = document.getElementById("join_" + lock);
-    if (joinElement && joinElement.onclick) {
-      joinElement.onclick = null;
-      joinElement.classList.remove("maskSpanJoinable");
-      joinElement.classList.add("maskSpan");
+    if (joinElement) {
+      joinElement.childNodes[0].childNodes[0].onclick = null;
+      joinElement.childNodes[0].childNodes[0].removeAttribute('href');
+      joinElement.childNodes[0].childNodes[0].removeAttribute('title');
     }
   };
 
@@ -300,18 +300,22 @@ function createRow(calcbody, node, address, mask, labels, depth)
       newCell.rowSpan = (rowspan > 1 ? rowspan : 1);
       newCell.colSpan = (colspan > 1 ? colspan : 1);
       newCell.id = "join_" + inet_ntoa(network_address(address, mask)) + "/" + mask;
+      var newDivision = document.createElement('div');
+      var newLink = document.createElement('a');
 
       if (i == (labels.length/3)-1 || comment != null) {
-        newCell.classList.add("maskSpan")
+        newCell.classList.add('maskSpan');
+        newCell.classList.add('disabledAction');
       }
       else {
-        newCell.classList.add("maskSpanJoinable")
-        newCell.onclick = newJoin(joinnode);
+        newCell.classList.add('maskSpan');
+        newLink.onclick = newJoin(joinnode);
+        newLink.title = "Merge this /" + mask + " subnet together";
+        newLink.href = "#";
       }
-
-      var newImg = document.createElement('IMG');
-      newImg.src = 'img/'+mask+'.gif';
-      newCell.appendChild(newImg);
+      newLink.innerText = "/" + mask;
+      newDivision.appendChild(newLink);
+      newCell.appendChild(newDivision);
       newRow.appendChild(newCell);
 
       colspan = 1; // reset for subsequent cells
@@ -366,7 +370,6 @@ function updateDepthChildren(node)
     return node[1];
   }
 }
-
 
 var rootSubnet;
 
@@ -424,26 +427,8 @@ function subnet_netmask(mask)
   return network_address(0xffffffff, mask);
 }
 
-
-function preloadSubnetImages()
-{
-  if (document.images) {
-    if (!document.preloadedImages) {
-      document.preloadedImages = new Array();
-    }
-
-    for (var i=0; i<=32; i++) {
-      var img = new Image();
-      img.src = 'img/'+i+'.gif';
-      document.preloadedImages.push(img);
-    }
-  }
-}
-
-
 function calcOnLoad()
 {
-  preloadSubnetImages();
   args = parseQueryString();
   if (args['network'] && args['mask'] && args['division']) {
     document.forms['calc'].elements['network'].value = args['network'];
@@ -493,7 +478,7 @@ function parseQueryString (str)
     var fields = query.split('&');
     for (var f = 0; f < fields.length; f++) {
       var field = fields[f].split('=');
-      args[unescape(field[0].replace(/\+/g, ' '))] = 
+      args[unescape(field[0].replace(/\+/g, ' '))] =
 	unescape(field[1].replace(/\+/g, ' '));
     }
   }
@@ -563,7 +548,7 @@ P		{
 .calc {
   font-family: Arial, Verdana, sans-serif;
   font-size: 80%;
-  border-collapse: collapse; 
+  border-collapse: collapse;
 }
 .calc td {
  border: 1px solid black;
@@ -583,13 +568,16 @@ P		{
 }
 
 .maskSpan {
-  background-color: #cccccc;
-  text-align: right;
+    background-color: #cccccc;
+    text-align: right;
+    font-size: x-small;
+    font-family: monospace;
+    color: black;
 }
-.maskSpanJoinable {
-  background-color: #cccccc;
-  text-align: right;
-  cursor: grab;
+
+.maskSpan div {
+  transform: rotate(90deg);
+  text-align: center;
 }
 
 .maskSpanRotate {
