@@ -6,6 +6,7 @@
 
 var curNetwork = 0;
 var curMask = 0;
+var curComments = {};
 
 function updateNetwork()
 {
@@ -77,10 +78,37 @@ function recreateTables()
   document.getElementById('joinHeader').colSpan = (rootSubnet[0] > 0 ? rootSubnet[0] : 1);
   document.getElementById('col_join').span = (rootSubnet[0] > 0 ? rootSubnet[0] : 1);
 
-  /* Create the bookmark hyperlink */
+  /* Disable joins for subnets with comments. */
+  var joinLocks = {}; // a unique collection of join elements to disable
+
+  for (var addressWithMask in curComments) {
+    let splitAddressMask = addressWithMask.split('/');
+    let addressToLock = inet_aton(splitAddressMask[0]);
+    let upperMaskToLock = splitAddressMask[1];
+    for (let maskToLock = upperMaskToLock; maskToLock >= curMask; maskToLock--) {
+      joinLocks[inet_ntoa(network_address(addressToLock, maskToLock)) + "/" + maskToLock] = true;
+    }
+  }
+
+  for (var lock in joinLocks) {
+    let joinElement = document.getElementById("join_" + lock);
+    if (joinElement && joinElement.onclick) {
+      joinElement.onclick = null;
+      joinElement.classList.remove("maskSpanJoinable");
+      joinElement.classList.add("maskSpan");
+    }
+  };
+
+  createBookmarkHyperlink();
+}
+
+function createBookmarkHyperlink() {
   var link = document.getElementById('saveLink');
   if (link) {
-    link.href = 'subnets.html?network='+inet_ntoa(curNetwork)+'&mask='+curMask+'&division='+binToAscii(nodeToString(rootSubnet));
+    link.href = '?network='+inet_ntoa(curNetwork)
+               +'&mask='+curMask
+               +'&division='+binToAscii(nodeToString(rootSubnet))
+               +'&comments='+encodeURIComponent(JSON.stringify(curComments));
   }
 }
 
@@ -132,9 +160,10 @@ function asciiToBin(str)
   return out;
 }
 
+// Recursive function that creates rows working from the outer most mask and working inwards
 function createRow(calcbody, node, address, mask, labels, depth)
 {
-  if (node[2]) {
+  if (node[2]) { // We need to go deeper
     var newlabels = labels;
     newlabels.push(mask+1);
     newlabels.push(node[2][0][1]);
@@ -147,7 +176,7 @@ function createRow(calcbody, node, address, mask, labels, depth)
     newlabels.push(node[2][1]);
     createRow(calcbody, node[2][1], address+subnet_addresses(mask+1), mask+1, newlabels, depth-1);
   }
-  else {
+  else { // Actually create a row
     var newRow = document.createElement('TR');
     calcbody.appendChild(newRow);
 
@@ -163,6 +192,7 @@ function createRow(calcbody, node, address, mask, labels, depth)
     var numHosts;
     var addressRange;
     var usaebleRange;
+    var comment = curComments[inet_ntoa(address) + "/" + mask] || null;
 
     if (mask == 32) {
       addressRange = inet_ntoa(addressFirst);
@@ -201,12 +231,42 @@ function createRow(calcbody, node, address, mask, labels, depth)
     newCell.appendChild(document.createTextNode(numHosts));
     newRow.appendChild(newCell);
 
+    /* Comments */
+    var newCell = document.createElement('TD');
+    var textarea = document.createElement('TEXTAREA');
+    textarea.id = "comment_" + inet_ntoa(network_address(address, mask)) + "/" + mask;
+    textarea.onchange = ((mask, address) => ( function() {
+      var key = inet_ntoa(address) + "/" + mask;
+      var needToRedraw = false;
+
+      if (this.value == null || this.value === "") {
+        needToRedraw = curComments[key] !== undefined;
+        delete curComments[key];
+      } else {
+        needToRedraw = curComments[key] === undefined;
+        curComments[key] = this.value;
+      }
+
+      if (needToRedraw) {
+        recreateTables();
+        // Restore previous focus after redrawing table
+        document.getElementById(this.id).focus();
+      } else {
+        // Just update link if we don't need to redraw.
+        createBookmarkHyperlink();
+      }
+    }))(mask, address); // keep some vars in scope
+
+    textarea.innerText = comment;
+    newCell.appendChild(textarea);
+    newRow.appendChild(newCell);
+
     /* actions */
 
     var newCell = document.createElement('TD');
     newRow.appendChild(newCell);
 
-    if (mask == 32) {
+    if (mask == 32 || comment != null) {
       var newLink = document.createElement('SPAN');
       newLink.className = 'disabledAction';
       newLink.appendChild(document.createTextNode('Divide'));
@@ -230,6 +290,7 @@ function createRow(calcbody, node, address, mask, labels, depth)
       var newCell = document.createElement('TD');
       newCell.rowSpan = (rowspan > 1 ? rowspan : 1);
       newCell.colSpan = (colspan > 1 ? colspan : 1);
+      newCell.id = "join_" + inet_ntoa(network_address(address, mask)) + "/" + mask;
 
       if (i == (labels.length/3)-1) {
 	newCell.className = 'maskSpan';
@@ -248,13 +309,15 @@ function createRow(calcbody, node, address, mask, labels, depth)
       colspan = 1; // reset for subsequent cells
     }
   }
-
 }
 
 /* This is necessary because 'joinnode' changes during the scope of the caller */
 function newJoin(joinnode)
 {
-  return function() { join(joinnode) };
+  return function() {
+    join(joinnode);
+    return false; // prevent click event
+  };
 }
 
 function divide(node)
@@ -377,6 +440,12 @@ function calcOnLoad()
   if (args['network'] && args['mask'] && args['division']) {
     document.forms['calc'].elements['network'].value = args['network'];
     document.forms['calc'].elements['netbits'].value = args['mask'];
+
+    if (args['comments']) {
+      curComments = JSON.parse(args['comments']);
+    } else {
+      curComments = {};
+    }
     updateNetwork();
     var division = asciiToBin(args['division']);
     rootSubnet = [0, 0, null];
@@ -478,6 +547,10 @@ P		{
   background-color: #eeeeee;
 }
 
+.calc textarea {
+  height: 1.5em;
+}
+
 .disabledAction {
  color: #dddddd;
 }
@@ -489,7 +562,7 @@ P		{
 .maskSpanJoinable {
   background-color: #cccccc;
   text-align: right;
- cursor: hand;
+  cursor: grab;
 }
 
 .maskSpanRotate {
@@ -525,12 +598,13 @@ P		{
 </tr>
 </table>
 
-<p>Show columns: 
+<p>Show columns:
 <input type="checkbox" id="cb_subnet" checked onclick="toggleColumn(this)"><label for="cb_subnet">Subnet address</label>
 <input type="checkbox" id="cb_netmask" onclick="toggleColumn(this)"><label for="cb_netmask">Netmask</label>
 <input type="checkbox" id="cb_range" checked onclick="toggleColumn(this)"><label for="cb_range">Range of addresses</label>
 <input type="checkbox" id="cb_useable" checked onclick="toggleColumn(this)"><label for="cb_useable">Useable IPs</label>
 <input type="checkbox" id="cb_hosts" checked onclick="toggleColumn(this)"><label for="cb_hosts">Hosts</label>
+<input type="checkbox" id="cb_comments" checked onclick="toggleColumn(this)"><label for="cb_comments">Comments</label>
 <input type="checkbox" id="cb_divide" checked onclick="toggleColumn(this)"><label for="cb_divide">Divide</label>
 <input type="checkbox" id="cb_join" checked onclick="toggleColumn(this)"><label for="cb_join">Join</label>
 </p>
@@ -557,6 +631,7 @@ If you wish to save this subnetting for later, bookmark <a href="subnets.html" i
 <col id="col_range">
 <col id="col_useable">
 <col id="col_hosts">
+<col id="col_comments">
 <col id="col_divide">
 <col id="col_join">
 </colgroup>
@@ -567,6 +642,7 @@ If you wish to save this subnetting for later, bookmark <a href="subnets.html" i
 <td>Range of addresses</td>
 <td>Useable IPs</td>
 <td>Hosts</td>
+<td>Comments</td>
 <td>Divide</td>
 <td id="joinHeader">Join</td>
 </tr>
