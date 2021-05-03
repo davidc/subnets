@@ -492,13 +492,21 @@ function toggleColumn(cb)
   var cssName = '--display-'+(cb.id.substr(3));
 
   if (cb.checked) {
-    document.documentElement.style.setProperty(cssName, null);
+    enableColumn(cssName);
   }
   else {
-    document.documentElement.style.setProperty(cssName, 'none');
+    disableColumn(cssName);
   }
 
   recreateTables(); /* because IE draws lines all over the place with border-collapse */
+}
+
+function enableColumn(cssName) {
+  document.documentElement.style.setProperty(cssName, null);
+}
+
+function disableColumn(cssName) {
+  document.documentElement.style.setProperty(cssName, 'none');
 }
 
 //-->
