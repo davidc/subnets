@@ -109,7 +109,7 @@ function createBookmarkHyperlink() {
     link.href = '?network='+inet_ntoa(curNetwork)
                +'&mask='+curMask
                +'&division='+binToAscii(nodeToString(rootSubnet))
-               +'&comments='+encodeURIComponent(JSON.stringify(curComments));
+               +(Object.keys(curComments).length > 0 ? '&comments='+encodeURIComponent(JSON.stringify(curComments)) : "");
   }
 }
 
@@ -435,6 +435,7 @@ function calcOnLoad()
     document.forms['calc'].elements['netbits'].value = args['mask'];
 
     if (args['comments']) {
+      clickElement('cb_comments');
       curComments = JSON.parse(args['comments']);
     } else {
       curComments = {};
@@ -492,21 +493,21 @@ function toggleColumn(cb)
   var cssName = '--display-'+(cb.id.substr(3));
 
   if (cb.checked) {
-    enableColumn(cssName);
+    document.documentElement.style.setProperty(cssName, 'table-cell');
   }
   else {
-    disableColumn(cssName);
+    document.documentElement.style.setProperty(cssName, 'none');
   }
 
   recreateTables(); /* because IE draws lines all over the place with border-collapse */
 }
 
-function enableColumn(cssName) {
-  document.documentElement.style.setProperty(cssName, null);
-}
-
-function disableColumn(cssName) {
-  document.documentElement.style.setProperty(cssName, 'none');
+function clickElement(id) {
+  document.getElementById(id).dispatchEvent(new MouseEvent('click', {
+    view: window,
+    bubbles: true,
+    cancelable: true
+  }))
 }
 
 //-->
@@ -520,7 +521,7 @@ function disableColumn(cssName) {
   --display-range:    table-cell;
   --display-useable:  table-cell;
   --display-hosts:    table-cell;
-  --display-comments: table-cell;
+  --display-comments: none;
   --display-divide:   table-cell;
   --display-join:     table-cell;
 }
@@ -622,14 +623,14 @@ P		{
 </table>
 
 <p>Show columns:
-<input type="checkbox" id="cb_subnet"   checked  onclick="toggleColumn(this)"><label for="cb_subnet">Subnet address</label>
-<input type="checkbox" id="cb_netmask"  checked  onclick="toggleColumn(this)"><label for="cb_netmask">Netmask</label>
-<input type="checkbox" id="cb_range"    checked  onclick="toggleColumn(this)"><label for="cb_range">Range of addresses</label>
-<input type="checkbox" id="cb_useable"  checked  onclick="toggleColumn(this)"><label for="cb_useable">Useable IPs</label>
-<input type="checkbox" id="cb_hosts"    checked  onclick="toggleColumn(this)"><label for="cb_hosts">Hosts</label>
-<input type="checkbox" id="cb_comments" checked  onclick="toggleColumn(this)"><label for="cb_comments">Comments</label>
-<input type="checkbox" id="cb_divide"   checked  onclick="toggleColumn(this)"><label for="cb_divide">Divide</label>
-<input type="checkbox" id="cb_join"     checked  onclick="toggleColumn(this)"><label for="cb_join">Join</label>
+<input type="checkbox" id="cb_subnet"   checked  onchange="toggleColumn(this)"><label for="cb_subnet">Subnet address</label>
+<input type="checkbox" id="cb_netmask"  checked  onchange="toggleColumn(this)"><label for="cb_netmask">Netmask</label>
+<input type="checkbox" id="cb_range"    checked  onchange="toggleColumn(this)"><label for="cb_range">Range of addresses</label>
+<input type="checkbox" id="cb_useable"  checked  onchange="toggleColumn(this)"><label for="cb_useable">Useable IPs</label>
+<input type="checkbox" id="cb_hosts"    checked  onchange="toggleColumn(this)"><label for="cb_hosts">Hosts</label>
+<input type="checkbox" id="cb_comments"          onchange="toggleColumn(this)"><label for="cb_comments">Comments</label>
+<input type="checkbox" id="cb_divide"   checked  onchange="toggleColumn(this)"><label for="cb_divide">Divide</label>
+<input type="checkbox" id="cb_join"     checked  onchange="toggleColumn(this)"><label for="cb_join">Join</label>
 </p>
 </form>
 
