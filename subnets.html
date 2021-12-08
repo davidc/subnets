@@ -1,585 +1,639 @@
 <html>
-<head>
-<title>Visual Subnet Calculator</title>
-<script language="javascript" type="text/javascript">
-<!--
+  <head>
+    <title>Visual Subnet Calculator</title>
+    <script src="calculations_4.js"></script>
+    <script src="calculations_6.js"></script>
+    <script src="calculations.js"></script>
 
-var curNetwork = 0;
-var curMask = 0;
+    <script language="javascript" type="text/javascript">
+      var curNetwork = 0;
+      var curMask = 0;
 
-function updateNetwork()
-{
-  var newNetworkStr = document.forms['calc'].elements['network'].value;
-  var newMask = parseInt(document.forms['calc'].elements['netbits'].value);
+      var curVersion = 4;
 
-  var newNetwork = inet_aton(newNetworkStr);
+      function updateNetwork() {
+        var newNetworkStr = document.forms["calc"].elements["network"].value;
+        var newMask = parseInt(
+          document.forms["calc"].elements["netbits"].value
+        );
+        var newVersion = parseInt(
+          document.forms["calc"].elements["version"].value
+        );
 
-  if (newNetwork === null) {
-    alert('Invalid network address entered');
-    return;
-  }
+        var newNetwork = inet_aton(newVersion, newNetworkStr);
 
-  var tmpNetwork = network_address(newNetwork, newMask);
-  if (newNetwork != tmpNetwork) {
-    alert('The network address entered is not on a network boundary for this mask.\nIt has been changed to '+inet_ntoa(tmpNetwork)+'.');
-    newNetwork = tmpNetwork;
-    document.forms['calc'].elements['network'].value = inet_ntoa(tmpNetwork);
-  }
+        if (newNetwork === null) {
+          alert("Invalid network address entered");
+          return;
+        }
 
-  if (newMask < 0 || newMask > 32) {
-    alert('The network mask you have entered is invalid');
-    return;
-  }
+        var tmpNetwork = network_address(newVersion, newNetwork, newMask);
+        if (newNetwork != tmpNetwork) {
+          alert(
+            "The network address entered is not on a network boundary for this mask.\nIt has been changed to " +
+              inet_ntoa(newVersion, tmpNetwork) +
+              "."
+          );
+          newNetwork = tmpNetwork;
+          document.forms["calc"].elements["network"].value = inet_ntoa(
+            newVersion,
+            tmpNetwork
+          );
+        }
 
-  if (curMask == 0) {
-    curMask = newMask;
-    curNetwork = newNetwork;
-    startOver();
-  }
-  else if (curMask != newMask && confirm('You are changing the base network from /'+curMask+' to /'+newMask+'. This will reset any changes you have made. Proceed?')) {
-    curMask = newMask;
-    curNetwork = newNetwork;
+        if ((newVersion == 4 && (newMask < 0 || newMask > 32)) || (newVersion == 6 && (newMask < 0 || newMask > 128))) {
+          alert("The network mask you have entered is invalid");
+          return;
+        }
 
-    startOver();
-  }
-  else {
-    document.forms['calc'].elements['netbits'].value = curMask;
-    curNetwork = newNetwork;
+        if (curMask == 0) {
+          curMask = newMask;
+          curNetwork = newNetwork;
+          curVersion = newVersion;
+          startOver();
+        } else if (
+          (curMask != newMask || curVersion != newVersion) &&
+          confirm(
+            "You are changing the base network from /" +
+              curMask + "(v" + curVersion +
+              ") to /" +
+              newMask + "(v" + newVersion +
+              "). This will reset any changes you have made. Proceed?"
+          )
+        ) {
+          curMask = newMask;
+          curNetwork = newNetwork;
+          curVersion = newVersion;
 
-    recreateTables();
-  }
-}
+          startOver();
+        } else {
+          document.forms["calc"].elements["netbits"].value = curMask;
+          curNetwork = newNetwork;
 
-function startOver()
-{
-  rootSubnet = [0, 0, null];
-
-  recreateTables();
-}
-
-function recreateTables()
-{
-  var calcbody = document.getElementById('calcbody');
-  if (!calcbody) {
-    alert('Body not found');
-    return;
-  }
-
-  while (calcbody.hasChildNodes()) {
-    calcbody.removeChild(calcbody.firstChild);
-  }
-
-  updateNumChildren(rootSubnet);
-  updateDepthChildren(rootSubnet);
-
-  createRow(calcbody, rootSubnet, curNetwork, curMask, [curMask, rootSubnet[1], rootSubnet], rootSubnet[0]);
-
-  document.getElementById('joinHeader').colSpan = (rootSubnet[0] > 0 ? rootSubnet[0] : 1);
-  document.getElementById('col_join').span = (rootSubnet[0] > 0 ? rootSubnet[0] : 1);
-
-  /* Create the bookmark hyperlink */
-  var link = document.getElementById('saveLink');
-  if (link) {
-    link.href = 'subnets.html?network='+inet_ntoa(curNetwork)+'&mask='+curMask+'&division='+binToAscii(nodeToString(rootSubnet));
-  }
-}
-
-function nodeToString(node)
-{
-  if (node[2]) {
-    return '1'+nodeToString(node[2][0])+nodeToString(node[2][1]);
-  }
-  else {
-    return '0';
-  }
-}
-
-function binToAscii(str)
-{
-  var curOut = '';
-  var curBit = 0;
-  var curChar = 0;
-
-  for (var i=0; i<str.length; i++) {
-    if (str.charAt(i) == '1') {
-      curChar |= 1<<curBit;
-    }
-    curBit++;
-    if (curBit > 3) {
-      curOut += curChar.toString(16);
-      curChar = 0;
-      curBit = 0;
-    }
-  }
-  if (curBit > 0) {
-    curOut += curChar.toString(16);
-  }
-  return str.length+'.'+curOut;
-}
-
-function asciiToBin(str)
-{
-  var re = /([0-9]+)\.([0-9a-f]+)/;
-  var res = re.exec(str);
-  var len = res[1];
-  var encoded = res[2];
-  var out = '';
-  for (var i=0; i< res[1]; i++) {
-    var ch = parseInt(res[2].charAt(Math.floor(i/4)), 16);
-    var pos = i % 4;
-    out += (ch & (1<<pos) ? '1' : '0');
-  }
-  return out;
-}
-
-function createRow(calcbody, node, address, mask, labels, depth)
-{
-  if (node[2]) {
-    var newlabels = labels;
-    newlabels.push(mask+1);
-    newlabels.push(node[2][0][1]);
-    newlabels.push(node[2][0]);
-    createRow(calcbody, node[2][0], address, mask+1, newlabels, depth-1);
-
-    newlabels = new Array();
-    newlabels.push(mask+1);
-    newlabels.push(node[2][1][1]);
-    newlabels.push(node[2][1]);
-    createRow(calcbody, node[2][1], address+subnet_addresses(mask+1), mask+1, newlabels, depth-1);
-  }
-  else {
-    var newRow = document.createElement('TR');
-    calcbody.appendChild(newRow);
-
-    /* subnet address */
-    var newCell = document.createElement('TD');
-    newCell.appendChild(document.createTextNode(inet_ntoa(address)+'/'+mask));
-    newRow.appendChild(newCell);
-
-    var addressFirst = address;
-    var addressLast = subnet_last_address(address, mask);
-    var useableFirst = address + 1;
-    var useableLast = addressLast - 1;
-    var numHosts;
-    var addressRange;
-    var usaebleRange;
-
-    if (mask == 32) {
-      addressRange = inet_ntoa(addressFirst);
-      useableRange = addressRange;
-      numHosts = 1;
-    }
-    else {
-      addressRange = inet_ntoa(addressFirst)+' - '+inet_ntoa(addressLast);
-      if (mask == 31) {
-	useableRange = addressRange;
-	numHosts = 2;
-      }
-      else {
-	useableRange = inet_ntoa(useableFirst)+' - '+inet_ntoa(useableLast);
-	numHosts = (1 + useableLast - useableFirst);
-      }
-    }
-
-    /* netmask */
-    var newCell = document.createElement('TD');
-    newCell.appendChild(document.createTextNode(inet_ntoa(subnet_netmask(mask))));
-    newRow.appendChild(newCell);
-
-    /* range of addresses */
-    var newCell = document.createElement('TD');
-    newCell.appendChild(document.createTextNode(addressRange));
-    newRow.appendChild(newCell);
-
-    /* useable addresses */
-    var newCell = document.createElement('TD');
-    newCell.appendChild(document.createTextNode(useableRange));
-    newRow.appendChild(newCell);
-
-    /* Hosts */
-    var newCell = document.createElement('TD');
-    newCell.appendChild(document.createTextNode(numHosts));
-    newRow.appendChild(newCell);
-
-    /* actions */
-
-    var newCell = document.createElement('TD');
-    newRow.appendChild(newCell);
-
-    if (mask == 32) {
-      var newLink = document.createElement('SPAN');
-      newLink.className = 'disabledAction';
-      newLink.appendChild(document.createTextNode('Divide'));
-      newCell.appendChild(newLink);
-    }
-    else {
-      var newLink = document.createElement('A');
-      newLink.href = '#';
-      newLink.onclick = function () { divide(node); return false; }
-      newLink.appendChild(document.createTextNode('Divide'));
-      newCell.appendChild(newLink);
-    }
-
-    var colspan = depth - node[0];
-
-    for (var i=(labels.length/3)-1; i>=0; i--) {
-      var mask = labels[i*3];
-      var rowspan = labels[(i*3)+1];
-      var joinnode = labels[(i*3)+2];
-
-      var newCell = document.createElement('TD');
-      newCell.rowSpan = (rowspan > 1 ? rowspan : 1);
-      newCell.colSpan = (colspan > 1 ? colspan : 1);
-
-      if (i == (labels.length/3)-1) {
-	newCell.className = 'maskSpan';
-      }
-      else {
-	newCell.className = 'maskSpanJoinable';
-	newCell.onclick = newJoin(joinnode);
-	//	newCell.onmouseover = function() { window.status = joinnode[0]+'---'+joinnode[1]+'---'+joinnode[2]+'>>>>>'+node[2];}
+          recreateTables();
+        }
       }
 
-      var newImg = document.createElement('IMG');
-      newImg.src = 'img/'+mask+'.gif';
-      newCell.appendChild(newImg);
-      newRow.appendChild(newCell);
+      function startOver() {
+        rootSubnet = [0, 0, null];
 
-      colspan = 1; // reset for subsequent cells
-    }
-  }
+        recreateTables();
+      }
 
-}
+      function recreateTables() {
+        var calcbody = document.getElementById("calcbody");
+        if (!calcbody) {
+          alert("Body not found");
+          return;
+        }
 
-/* This is necessary because 'joinnode' changes during the scope of the caller */
-function newJoin(joinnode)
-{
-  return function() { join(joinnode) };
-}
+        while (calcbody.hasChildNodes()) {
+          calcbody.removeChild(calcbody.firstChild);
+        }
 
-function divide(node)
-{
-  node[2] = new Array();
-  node[2][0] = [0, 0, null];
-  node[2][1] = [0, 0, null];
-  recreateTables();
-}
+        updateNumChildren(rootSubnet);
+        updateDepthChildren(rootSubnet);
 
-function join(node)
-{
-  /* easy as pie */
-  node[2] = null;
-  recreateTables();
-}
+        createRow(
+          calcbody,
+          rootSubnet,
+          curNetwork,
+          curMask,
+          [curMask, rootSubnet[1], rootSubnet],
+          rootSubnet[0]
+        );
 
-function updateNumChildren(node)
-{
-  if (node[2] == null) {
-    node[1] = 0;
-    return 1;
-  }
-  else {
-    node[1] = updateNumChildren(node[2][0]) + updateNumChildren(node[2][1]);
-    return node[1];
-  }
-}
+        document.getElementById("joinHeader").colSpan =
+          rootSubnet[0] > 0 ? rootSubnet[0] : 1;
+        document.getElementById("col_join").span =
+          rootSubnet[0] > 0 ? rootSubnet[0] : 1;
 
-function updateDepthChildren(node)
-{
-  if (node[2] == null) {
-    node[0] = 0;
-    return 1;
-  }
-  else {
-    node[0] = updateDepthChildren(node[2][0]) + updateDepthChildren(node[2][1]);
-    return node[1];
-  }
-}
+        /* Create the bookmark hyperlink */
+        var link = document.getElementById("saveLink");
+        if (link) {
+          link.href =
+            "subnets.html?version=" +
+            curVersion +
+            "&network=" +
+            inet_ntoa(curVersion, curNetwork) +
+            "&mask=" +
+            curMask +
+            "&division=" +
+            binToAscii(nodeToString(rootSubnet));
+        }
+      }
 
+      function nodeToString(node) {
+        if (node[2]) {
+          return "1" + nodeToString(node[2][0]) + nodeToString(node[2][1]);
+        } else {
+          return "0";
+        }
+      }
 
-var rootSubnet;
+      function binToAscii(str) {
+        var curOut = "";
+        var curBit = 0;
+        var curChar = 0;
 
-// each node is Array:
-// [0] => depth of children, total number of visible children, children
+        for (var i = 0; i < str.length; i++) {
+          if (str.charAt(i) == "1") {
+            curChar |= 1 << curBit;
+          }
+          curBit++;
+          if (curBit > 3) {
+            curOut += curChar.toString(16);
+            curChar = 0;
+            curBit = 0;
+          }
+        }
+        if (curBit > 0) {
+          curOut += curChar.toString(16);
+        }
+        return str.length + "." + curOut;
+      }
 
+      function asciiToBin(str) {
+        var re = /([0-9]+)\.([0-9a-f]+)/;
+        var res = re.exec(str);
+        var len = res[1];
+        var encoded = res[2];
+        var out = "";
+        for (var i = 0; i < res[1]; i++) {
+          var ch = parseInt(res[2].charAt(Math.floor(i / 4)), 16);
+          var pos = i % 4;
+          out += ch & (1 << pos) ? "1" : "0";
+        }
+        return out;
+      }
 
-function inet_ntoa(addrint)
-{
-  return ((addrint >> 24) & 0xff)+'.'+
-    ((addrint >> 16) & 0xff)+'.'+
-    ((addrint >> 8) & 0xff)+'.'+
-    (addrint & 0xff);
-}
+      function createRow(calcbody, node, address, mask, labels, depth) {
+        if (node[2]) {
+          var newlabels = labels;
+          newlabels.push(mask + 1);
+          newlabels.push(node[2][0][1]);
+          newlabels.push(node[2][0]);
+          createRow(
+            calcbody,
+            node[2][0],
+            address,
+            mask + 1,
+            newlabels,
+            depth - 1
+          );
 
-function inet_aton(addrstr)
-{
-  var re = /^([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})$/;
-  var res = re.exec(addrstr);
+          newlabels = new Array();
+          newlabels.push(mask + 1);
+          newlabels.push(node[2][1][1]);
+          newlabels.push(node[2][1]);
+          createRow(
+            calcbody,
+            node[2][1],
+            address + subnet_addresses(curVersion, mask + 1),
+            mask + 1,
+            newlabels,
+            depth - 1
+          );
+        } else {
+          var newRow = document.createElement("TR");
+          calcbody.appendChild(newRow);
 
-  if (res === null) {
-    return null;
-  }
+          /* subnet address */
+          var newCell = document.createElement("TD");
+          newCell.appendChild(
+            document.createTextNode(inet_ntoa(curVersion, address) + "/" + mask)
+          );
+          newRow.appendChild(newCell);
 
-  for (var i=1; i<=4; i++) {
-    if (res[i] < 0 || res[i] > 255) {
-      return null;
-    }
-  }
+          var addressFirst = address;
+          var addressLast = subnet_last_address(curVersion, address, mask);
+          var useableFirst = subnet_first_address_useable(curVersion, address);
+          var useableLast = subnet_last_address_useable(curVersion, addressLast);
+          var numHosts;
+          var addressRange;
+          var usaebleRange;
 
-  return (res[1] << 24) | (res[2] << 16) | (res[3] << 8) | res[4];
-}
+          if ((curVersion == 4 && mask == 32) || (curVersion == 6 && mask == 128)) {
+            addressRange = inet_ntoa(curVersion, addressFirst);
+            useableRange = addressRange;
+            numHosts = 1;
+          } else {
+            addressRange =
+              inet_ntoa(curVersion, addressFirst) +
+              " - " +
+              inet_ntoa(curVersion, addressLast);
+            if ( (curVersion == 4 && mask == 31) || (curVersion == 6 && mask == 127)) {
+              useableRange = addressRange;
+              numHosts = 2;
+            } else {
+              useableRange =
+                inet_ntoa(curVersion, useableFirst) +
+                " - " +
+                inet_ntoa(curVersion, useableLast);
+              numHosts = num_hosts(curVersion, useableFirst, useableLast);
+            }
+          }
 
-function network_address(ip, mask)
-{
-  var maskbits = 0;
-  for (var i=31-mask; i>=0; i--) {
-    ip &= ~ 1<<i;
-  }
-  return ip;
-}
+          /* netmask */
+          var newCell = document.createElement("TD");
+          var netmask = subnet_netmask(curVersion, mask);
+          if (netmask) {
+            newCell.appendChild(
+              document.createTextNode(inet_ntoa(curVersion, netmask))
+            );
+          }
+          newRow.appendChild(newCell);
 
-function subnet_addresses(mask)
-{
-  return 1<<(32-mask);
-}
+          /* range of addresses */
+          var newCell = document.createElement("TD");
+          newCell.appendChild(document.createTextNode(addressRange));
+          newRow.appendChild(newCell);
 
-function subnet_last_address(subnet, mask)
-{
-  return subnet + subnet_addresses(mask) - 1;
-}
+          /* useable addresses */
+          var newCell = document.createElement("TD");
+          newCell.appendChild(document.createTextNode(useableRange));
+          newRow.appendChild(newCell);
 
-function subnet_netmask(mask)
-{
-  return network_address(0xffffffff, mask);
-}
+          /* Hosts */
+          var newCell = document.createElement("TD");
+          newCell.appendChild(document.createTextNode(numHosts));
+          newRow.appendChild(newCell);
 
+          /* actions */
 
-function preloadSubnetImages()
-{
-  if (document.images) {
-    if (!document.preloadedImages) {
-      document.preloadedImages = new Array();
-    }
+          var newCell = document.createElement("TD");
+          newRow.appendChild(newCell);
 
-    for (var i=0; i<=32; i++) {
-      var img = new Image();
-      img.src = 'img/'+i+'.gif';
-      document.preloadedImages.push(img);
-    }
-  }
-}
+          if ((curVersion == 4 && mask == 32) || (curVersion == 6 && mask == 128)) {
+            var newLink = document.createElement("SPAN");
+            newLink.className = "disabledAction";
+            newLink.appendChild(document.createTextNode("Divide"));
+            newCell.appendChild(newLink);
+          } else {
+            var newLink = document.createElement("A");
+            newLink.href = "#";
+            newLink.onclick = function () {
+              divide(node);
+              return false;
+            };
+            newLink.appendChild(document.createTextNode("Divide"));
+            newCell.appendChild(newLink);
+          }
 
+          var colspan = depth - node[0];
 
-function calcOnLoad()
-{
-  preloadSubnetImages();
-  args = parseQueryString();
-  if (args['network'] && args['mask'] && args['division']) {
-    document.forms['calc'].elements['network'].value = args['network'];
-    document.forms['calc'].elements['netbits'].value = args['mask'];
-    updateNetwork();
-    var division = asciiToBin(args['division']);
-    rootSubnet = [0, 0, null];
-    if (division != '0') {
-      loadNode(rootSubnet, division);
-    }
-    recreateTables();
-  }
-  else {
-    updateNetwork();
-  }
-}
+          for (var i = labels.length / 3 - 1; i >= 0; i--) {
+            var mask = labels[i * 3];
+            var rowspan = labels[i * 3 + 1];
+            var joinnode = labels[i * 3 + 2];
 
-function loadNode(curNode, division)
-{
-  if (division.charAt(0) == '0') {
-    return division.substr(1);
-  }
-  else {
-    curNode[2] = new Array();
-    curNode[2][0] = [0, 0, null];
-    curNode[2][1] = [0, 0, null];
+            var newCell = document.createElement("TD");
+            newCell.rowSpan = rowspan > 1 ? rowspan : 1;
+            newCell.colSpan = colspan > 1 ? colspan : 1;
 
-    division = loadNode(curNode[2][0], division.substr(1));
-    division = loadNode(curNode[2][1], division);
-    return division;
-  }
-}
+            if (i == labels.length / 3 - 1) {
+              newCell.className = "maskSpan";
+            } else {
+              newCell.className = "maskSpanJoinable";
+              newCell.onclick = newJoin(joinnode);
+              //	newCell.onmouseover = function() { window.status = joinnode[0]+'---'+joinnode[1]+'---'+joinnode[2]+'>>>>>'+node[2];}
+            }
 
+            var newImg = document.createElement("IMG");
+            newImg.src = "img/" + mask + ".gif";
+            newCell.appendChild(newImg);
+            newRow.appendChild(newCell);
 
-function parseQueryString (str)
-{
-  str = str ? str : location.search;
-  var query = str.charAt(0) == '?' ? str.substring(1) : str;
-  var args = new Object();
-  if (query) {
-    var fields = query.split('&');
-    for (var f = 0; f < fields.length; f++) {
-      var field = fields[f].split('=');
-      args[unescape(field[0].replace(/\+/g, ' '))] = 
-	unescape(field[1].replace(/\+/g, ' '));
-    }
-  }
-  return args;
-}
+            colspan = 1; // reset for subsequent cells
+          }
+        }
+      }
 
-window.onload = calcOnLoad;
+      /* This is necessary because 'joinnode' changes during the scope of the caller */
+      function newJoin(joinnode) {
+        return function () {
+          join(joinnode);
+        };
+      }
 
-function toggleColumn(cb)
-{
-  var colName = 'col_'+(cb.id.substr(3));
-  var col = document.getElementById(colName);
+      function divide(node) {
+        node[2] = new Array();
+        node[2][0] = [0, 0, null];
+        node[2][1] = [0, 0, null];
+        recreateTables();
+      }
 
-  if (cb.checked) {
-    col.style.display = 'block';
-  }
-  else {
-    col.style.display = 'none';
-  }
-  recreateTables(); /* because IE draws lines all over the place with border-collapse */
-}
+      function join(node) {
+        /* easy as pie */
+        node[2] = null;
+        recreateTables();
+      }
 
-//-->
-</script>
+      function updateNumChildren(node) {
+        if (node[2] == null) {
+          node[1] = 0;
+          return 1;
+        } else {
+          node[1] =
+            updateNumChildren(node[2][0]) + updateNumChildren(node[2][1]);
+          return node[1];
+        }
+      }
 
-<style type="text/css">
+      function updateDepthChildren(node) {
+        if (node[2] == null) {
+          node[0] = 0;
+          return 1;
+        } else {
+          node[0] =
+            updateDepthChildren(node[2][0]) + updateDepthChildren(node[2][1]);
+          return node[1];
+        }
+      }
 
-H1		{
-  font-family: Arial, Verdana, sans-serif;
-  font-size: 18pt;
-}
+      var rootSubnet;
 
-BODY		{
-  font-family: Arial, Verdana, sans-serif;
-}
+      // each node is Array:
+      // [0] => depth of children, total number of visible children, children
 
-P		{
-  font-family: Arial, Verdana, sans-serif;
-  font-size: 75%;
-}
+      function preloadSubnetImages() {
+        if (document.images) {
+          if (!document.preloadedImages) {
+            document.preloadedImages = new Array();
+          }
 
+          for (var i = 0; i <= 128; i++) {
+            var img = new Image();
+            img.src = "img/" + i + ".gif";
+            document.preloadedImages.push(img);
+          }
+        }
+      }
 
-.label		{
-  font-family: Arial, Verdana, sans-serif;
-  font-size: 60%;
-}
+      function calcOnLoad() {
+        preloadSubnetImages();
+        args = parseQueryString();
+        if (args["network"] && args["mask"] && args["division"]) {
+          document.forms["calc"].elements["version"].value = args["version"] || 4;
+          document.forms["calc"].elements["network"].value = args["network"];
+          document.forms["calc"].elements["netbits"].value = args["mask"];
+          updateNetwork();
+          var division = asciiToBin(args["division"]);
+          rootSubnet = [0, 0, null];
+          if (division != "0") {
+            loadNode(rootSubnet, division);
+          }
+          recreateTables();
+        } else {
+          updateNetwork();
+        }
+      }
 
-.calc {
-  font-family: Arial, Verdana, sans-serif;
-  font-size: 80%;
-  border-collapse: collapse; 
-}
-.calc td {
- border: 1px solid black;
-}
+      function loadNode(curNode, division) {
+        if (division.charAt(0) == "0") {
+          return division.substr(1);
+        } else {
+          curNode[2] = new Array();
+          curNode[2][0] = [0, 0, null];
+          curNode[2][1] = [0, 0, null];
 
-.calc thead {
-  font-weight: bold;
-  background-color: #eeeeee;
-}
+          division = loadNode(curNode[2][0], division.substr(1));
+          division = loadNode(curNode[2][1], division);
+          return division;
+        }
+      }
 
-.disabledAction {
- color: #dddddd;
-}
+      function parseQueryString(str) {
+        str = str ? str : location.search;
+        var query = str.charAt(0) == "?" ? str.substring(1) : str;
+        var args = new Object();
+        if (query) {
+          var fields = query.split("&");
+          for (var f = 0; f < fields.length; f++) {
+            var field = fields[f].split("=");
 
-.maskSpan {
-  background-color: #cccccc;
-  text-align: right;
-}
-.maskSpanJoinable {
-  background-color: #cccccc;
-  text-align: right;
- cursor: hand;
-}
+            args[unescape(field[0].replace(/\+/g, " "))] = unescape(
+              field[1].replace(/\+/g, " ")
+            );
+          }
+        }
+        return args;
+      }
 
-.maskSpanRotate {
- filter:progid:DXImageTransform.Microsoft.BasicImage(rotation=1);
- background-color:green;
-}
+      window.onload = calcOnLoad;
 
-</style>
-</head>
-<body>
+      function toggleColumn(cb) {
+        var colName = "col_" + cb.id.substr(3);
+        var col = document.getElementById(colName);
 
-<table width="100%">
-<tr valign=top>
-<td>
+        if (cb.checked) {
+          col.style.display = "block";
+        } else {
+          col.style.display = "none";
+        }
+        recreateTables(); /* because IE draws lines all over the place with border-collapse */
+      }
+    </script>
 
-<h1>Visual Subnet Calculator</h1>
+    <style type="text/css">
+      H1 {
+        font-family: Arial, Verdana, sans-serif;
+        font-size: 18pt;
+      }
 
-<p>Enter the network you wish to subnet:</p>
+      BODY {
+        font-family: Arial, Verdana, sans-serif;
+      }
 
-<form name="calc" onsubmit="updateNetwork(); return false;">
+      P {
+        font-family: Arial, Verdana, sans-serif;
+        font-size: 75%;
+      }
 
-<table cellspacing="0">
-<tr>
-<td class="label">Network Address</td>
-<td class="label">Mask bits</td>
-</tr>
-<tr>
-<td><input type="text" name="network" size="15" maxlength="15" value="192.168.0.0"></td>
-<td>/<input type="text" name="netbits" size="2" maxlength="2" value="16"></td>
-<td><input type="submit" value="Update">
-<input type="button" value="Reset" onclick="if (confirm('This will reset all subnet divisions you have made. Proceed?')) startOver();">
-</td>
-</tr>
-</table>
+      .label {
+        font-family: Arial, Verdana, sans-serif;
+        font-size: 60%;
+      }
 
-<p>Show columns: 
-<input type="checkbox" id="cb_subnet" checked onclick="toggleColumn(this)"><label for="cb_subnet">Subnet address</label>
-<input type="checkbox" id="cb_netmask" onclick="toggleColumn(this)"><label for="cb_netmask">Netmask</label>
-<input type="checkbox" id="cb_range" checked onclick="toggleColumn(this)"><label for="cb_range">Range of addresses</label>
-<input type="checkbox" id="cb_useable" checked onclick="toggleColumn(this)"><label for="cb_useable">Useable IPs</label>
-<input type="checkbox" id="cb_hosts" checked onclick="toggleColumn(this)"><label for="cb_hosts">Hosts</label>
-<input type="checkbox" id="cb_divide" checked onclick="toggleColumn(this)"><label for="cb_divide">Divide</label>
-<input type="checkbox" id="cb_join" checked onclick="toggleColumn(this)"><label for="cb_join">Join</label>
-</p>
-</form>
+      .calc {
+        font-family: Arial, Verdana, sans-serif;
+        font-size: 80%;
+        border-collapse: collapse;
+      }
+      .calc td {
+        border: 1px solid black;
+      }
 
-<p>Click below to split and join subnets.<br>
-If you wish to save this subnetting for later, bookmark <a href="subnets.html" id="saveLink">this hyperlink</a>.</p>
+      .calc thead {
+        font-weight: bold;
+        background-color: #eeeeee;
+      }
 
-</td>
-<td align="right">
-<a href="https://github.com/davidc/subnets"><img alt="Fork me on GitHub" src="https://github.blog/wp-content/uploads/2008/12/forkme_right_white_ffffff.png" style="right: 0;top: 0;position: absolute;" ></a>
-</td>
-</tr>
-</table>
+      .disabledAction {
+        color: #dddddd;
+      }
 
-<br>
-<hr noshade color="black" size="1">
-<br>
+      .maskSpan {
+        background-color: #cccccc;
+        text-align: right;
+      }
+      .maskSpanJoinable {
+        background-color: #cccccc;
+        text-align: right;
+        cursor: hand;
+      }
 
-<table class="calc" cellspacing="0" cellpadding="2">
-<colgroup>
-<col id="col_subnet">
-<col id="col_netmask" style="display: none">
-<col id="col_range">
-<col id="col_useable">
-<col id="col_hosts">
-<col id="col_divide">
-<col id="col_join">
-</colgroup>
-<thead>
-<tr>
-<td>Subnet address</td>
-<td>Netmask</td>
-<td>Range of addresses</td>
-<td>Useable IPs</td>
-<td>Hosts</td>
-<td>Divide</td>
-<td id="joinHeader">Join</td>
-</tr>
-</thead>
-<tbody id="calcbody">
-<!--tr>
+      .maskSpanRotate {
+        filter: progid:DXImageTransform.Microsoft.BasicImage(rotation=1);
+        background-color: green;
+      }
+    </style>
+  </head>
+  <body>
+    <table width="100%">
+      <tr valign="top">
+        <td>
+          <h1>Visual Subnet Calculator</h1>
+
+          <p>Enter the network you wish to subnet:</p>
+
+          <form name="calc" onsubmit="updateNetwork(); return false;">
+            <table cellspacing="0">
+              <tr>
+                <td class="label">IPv4 / IPv6</td>
+                <td class="label">Network Address</td>
+                <td class="label">Mask bits</td>
+              </tr>
+              <tr>
+                <td>
+                  <input type="radio" name="version" value="4" checked />
+                  <input type="radio" name="version" value="6" />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    name="network"
+                    size="15"
+                    maxlength="45"
+                    value="192.168.0.0"
+                  />
+                </td>
+                <td>
+                  /<input
+                    type="text"
+                    name="netbits"
+                    size="3"
+                    maxlength="3"
+                    value="16"
+                  />
+                </td>
+                <td>
+                  <input type="submit" value="Update" />
+                  <input
+                    type="button"
+                    value="Reset"
+                    onclick="if (confirm('This will reset all subnet divisions you have made. Proceed?')) startOver();"
+                  />
+                </td>
+              </tr>
+            </table>
+
+            <p>
+              Show columns:
+              <input
+                type="checkbox"
+                id="cb_subnet"
+                checked
+                onclick="toggleColumn(this)"
+              /><label for="cb_subnet">Subnet address</label>
+              <input
+                type="checkbox"
+                id="cb_netmask"
+                onclick="toggleColumn(this)"
+              /><label for="cb_netmask">Netmask</label>
+              <input
+                type="checkbox"
+                id="cb_range"
+                checked
+                onclick="toggleColumn(this)"
+              /><label for="cb_range">Range of addresses</label>
+              <input
+                type="checkbox"
+                id="cb_useable"
+                checked
+                onclick="toggleColumn(this)"
+              /><label for="cb_useable">Useable IPs</label>
+              <input
+                type="checkbox"
+                id="cb_hosts"
+                checked
+                onclick="toggleColumn(this)"
+              /><label for="cb_hosts">Hosts</label>
+              <input
+                type="checkbox"
+                id="cb_divide"
+                checked
+                onclick="toggleColumn(this)"
+              /><label for="cb_divide">Divide</label>
+              <input
+                type="checkbox"
+                id="cb_join"
+                checked
+                onclick="toggleColumn(this)"
+              /><label for="cb_join">Join</label>
+            </p>
+          </form>
+
+          <p>
+            Click below to split and join subnets.<br />
+            If you wish to save this subnetting for later, bookmark
+            <a href="subnets.html" id="saveLink">this hyperlink</a>.
+          </p>
+        </td>
+        <td align="right">
+          <a href="https://github.com/davidc/subnets"
+            ><img
+              alt="Fork me on GitHub"
+              src="https://github.blog/wp-content/uploads/2008/12/forkme_right_white_ffffff.png"
+              style="right: 0; top: 0; position: absolute"
+          /></a>
+        </td>
+      </tr>
+    </table>
+
+    <br />
+    <hr noshade color="black" size="1" />
+    <br />
+
+    <table class="calc" cellspacing="0" cellpadding="2">
+      <colgroup>
+        <col id="col_subnet" />
+        <col id="col_netmask" style="display: none" />
+        <col id="col_range" />
+        <col id="col_useable" />
+        <col id="col_hosts" />
+        <col id="col_divide" />
+        <col id="col_join" />
+      </colgroup>
+      <thead>
+        <tr>
+          <td>Subnet address</td>
+          <td>Netmask</td>
+          <td>Range of addresses</td>
+          <td>Useable IPs</td>
+          <td>Hosts</td>
+          <td>Divide</td>
+          <td id="joinHeader">Join</td>
+        </tr>
+      </thead>
+      <tbody id="calcbody">
+        <!--tr>
 <td>130.94.203.0/24</td>
 <td>130.94.203.0 - 130.94.203.255</td>
 <td>130.94.203.1 - 130.94.203.254 (254)</td>
 <td>Divide</td>
 </tr-->
-</tbody>
-</table>
-
-</body>
+      </tbody>
+    </table>
+  </body>
 </html>
