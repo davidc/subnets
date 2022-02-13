@@ -429,13 +429,22 @@ function subnet_netmask(mask)
 
 function calcOnLoad()
 {
+  // Hack that fixes checkbox state
+  var delayMultiplier = 1;
+  for (var columnName of 'subnet,netmask,range,useable,hosts,comments,divide,join'.split(',')) {
+    var toggleThisElement = (name) => clickElement('cb_' + name);
+    var boundEvent = toggleThisElement.bind(null, columnName);
+    window.setTimeout(boundEvent, delayMultiplier * 25);
+    window.setTimeout(boundEvent, delayMultiplier++ * 25 + 100);
+  }
+
   args = parseQueryString();
   if (args['network'] && args['mask'] && args['division']) {
     document.forms['calc'].elements['network'].value = args['network'];
     document.forms['calc'].elements['netbits'].value = args['mask'];
 
     if (args['comments']) {
-      clickElement('cb_comments');
+      document.getElementById('cb_comments').checked = true;
       curComments = JSON.parse(args['comments']);
     } else {
       curComments = {};
