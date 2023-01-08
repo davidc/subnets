@@ -4,6 +4,16 @@
 <script language="javascript" type="text/javascript">
 <!--
 
+var visibleColumns = {
+  subnet: true,
+  netmask: false,
+  range: true,
+  useable: true,
+  hosts: true,
+  divide: true,
+  join: true,
+};
+
 var curNetwork = 0;
 var curMask = 0;
 
@@ -59,6 +69,12 @@ function startOver()
 
 function recreateTables()
 {
+  // Update header visibility
+  for (const name in visibleColumns) {
+    console.log(name)
+    document.getElementById(name + 'Header').style.display = visibleColumns[name] ? 'table-cell' : 'none';
+  }
+
   var calcbody = document.getElementById('calcbody');
   if (!calcbody) {
     alert('Body not found');
@@ -75,7 +91,7 @@ function recreateTables()
   createRow(calcbody, rootSubnet, curNetwork, curMask, [curMask, rootSubnet[1], rootSubnet], rootSubnet[0]);
 
   document.getElementById('joinHeader').colSpan = (rootSubnet[0] > 0 ? rootSubnet[0] : 1);
-  document.getElementById('col_join').span = (rootSubnet[0] > 0 ? rootSubnet[0] : 1);
+//  document.getElementById('col_join').span = (rootSubnet[0] > 0 ? rootSubnet[0] : 1);
 
   /* Create the bookmark hyperlink */
   var link = document.getElementById('saveLink');
@@ -152,9 +168,11 @@ function createRow(calcbody, node, address, mask, labels, depth)
     calcbody.appendChild(newRow);
 
     /* subnet address */
-    var newCell = document.createElement('TD');
-    newCell.appendChild(document.createTextNode(inet_ntoa(address)+'/'+mask));
-    newRow.appendChild(newCell);
+    if (visibleColumns.subnet) {
+      var newCell = document.createElement('TD');
+      newCell.appendChild(document.createTextNode(inet_ntoa(address)+'/'+mask));
+      newRow.appendChild(newCell);
+    }
 
     var addressFirst = address;
     var addressLast = subnet_last_address(address, mask);
@@ -182,70 +200,82 @@ function createRow(calcbody, node, address, mask, labels, depth)
     }
 
     /* netmask */
-    var newCell = document.createElement('TD');
-    newCell.appendChild(document.createTextNode(inet_ntoa(subnet_netmask(mask))));
-    newRow.appendChild(newCell);
+    if (visibleColumns.netmask) {
+      var newCell = document.createElement('TD');
+      newCell.appendChild(document.createTextNode(inet_ntoa(subnet_netmask(mask))));
+      newRow.appendChild(newCell);
+    }
 
     /* range of addresses */
-    var newCell = document.createElement('TD');
-    newCell.appendChild(document.createTextNode(addressRange));
-    newRow.appendChild(newCell);
+    if (visibleColumns.range) {
+      var newCell = document.createElement('TD');
+      newCell.appendChild(document.createTextNode(addressRange));
+      newRow.appendChild(newCell);
+    }
 
     /* useable addresses */
-    var newCell = document.createElement('TD');
-    newCell.appendChild(document.createTextNode(useableRange));
-    newRow.appendChild(newCell);
+    if (visibleColumns.useable) {
+      var newCell = document.createElement('TD');
+      newCell.appendChild(document.createTextNode(useableRange));
+      newRow.appendChild(newCell);
+    }
 
     /* Hosts */
-    var newCell = document.createElement('TD');
-    newCell.appendChild(document.createTextNode(numHosts));
-    newRow.appendChild(newCell);
+    if (visibleColumns.hosts) {
+      var newCell = document.createElement('TD');
+      newCell.appendChild(document.createTextNode(numHosts));
+      newRow.appendChild(newCell);
+    }
 
     /* actions */
 
-    var newCell = document.createElement('TD');
-    newRow.appendChild(newCell);
-
-    if (mask == 32) {
-      var newLink = document.createElement('SPAN');
-      newLink.className = 'disabledAction';
-      newLink.appendChild(document.createTextNode('Divide'));
-      newCell.appendChild(newLink);
-    }
-    else {
-      var newLink = document.createElement('A');
-      newLink.href = '#';
-      newLink.onclick = function () { divide(node); return false; }
-      newLink.appendChild(document.createTextNode('Divide'));
-      newCell.appendChild(newLink);
-    }
-
-    var colspan = depth - node[0];
-
-    for (var i=(labels.length/3)-1; i>=0; i--) {
-      var mask = labels[i*3];
-      var rowspan = labels[(i*3)+1];
-      var joinnode = labels[(i*3)+2];
-
+    if (visibleColumns.divide) {
       var newCell = document.createElement('TD');
-      newCell.rowSpan = (rowspan > 1 ? rowspan : 1);
-      newCell.colSpan = (colspan > 1 ? colspan : 1);
-
-      if (i == (labels.length/3)-1) {
-	newCell.className = 'maskSpan';
-      }
-      else {
-	newCell.className = 'maskSpanJoinable';
-	newCell.onclick = newJoin(joinnode);
-	//	newCell.onmouseover = function() { window.status = joinnode[0]+'---'+joinnode[1]+'---'+joinnode[2]+'>>>>>'+node[2];}
-      }
-
-      var newImg = document.createElement('IMG');
-      newImg.src = 'img/'+mask+'.gif';
-      newCell.appendChild(newImg);
       newRow.appendChild(newCell);
 
-      colspan = 1; // reset for subsequent cells
+      if (mask == 32) {
+	var newLink = document.createElement('SPAN');
+	newLink.className = 'disabledAction';
+	newLink.appendChild(document.createTextNode('Divide'));
+	newCell.appendChild(newLink);
+      }
+      else {
+	var newLink = document.createElement('A');
+	newLink.href = '#';
+	newLink.onclick = function () { divide(node); return false; }
+	newLink.appendChild(document.createTextNode('Divide'));
+	newCell.appendChild(newLink);
+      }
+    }
+
+    if (visibleColumns.join) {
+      var colspan = depth - node[0];
+
+      for (var i=(labels.length/3)-1; i>=0; i--) {
+	var mask = labels[i*3];
+	var rowspan = labels[(i*3)+1];
+	var joinnode = labels[(i*3)+2];
+
+	var newCell = document.createElement('TD');
+	newCell.rowSpan = (rowspan > 1 ? rowspan : 1);
+	newCell.colSpan = (colspan > 1 ? colspan : 1);
+
+	if (i == (labels.length/3)-1) {
+	  newCell.className = 'maskSpan';
+	}
+	else {
+	  newCell.className = 'maskSpanJoinable';
+	  newCell.onclick = newJoin(joinnode);
+	  //	newCell.onmouseover = function() { window.status = joinnode[0]+'---'+joinnode[1]+'---'+joinnode[2]+'>>>>>'+node[2];}
+	}
+
+	var newImg = document.createElement('IMG');
+	newImg.src = 'img/'+mask+'.gif';
+	newCell.appendChild(newImg);
+	newRow.appendChild(newCell);
+
+	colspan = 1; // reset for subsequent cells
+      }
     }
   }
 
@@ -428,14 +458,18 @@ window.onload = calcOnLoad;
 function toggleColumn(cb)
 {
   var colName = 'col_'+(cb.id.substr(3));
-  var col = document.getElementById(colName);
+//  var col = document.getElementById(colName);
 
-  if (cb.checked) {
-    col.style.display = 'block';
-  }
-  else {
-    col.style.display = 'none';
-  }
+  visibleColumns[cb.id.substr(3)] = cb.checked;
+
+//  if (cb.checked) {
+//    col.style.display = 'table-column';
+//    col.style.visibility = 'visible';
+//  }
+//  else {
+//    col.style.display = 'none';
+//    col.style.visibility = 'collapse';
+//  }
   recreateTables(); /* because IE draws lines all over the place with border-collapse */
 }
 
@@ -458,8 +492,7 @@ P		{
   font-size: 75%;
 }
 
-
-.label		{
+.label {
   font-family: Arial, Verdana, sans-serif;
   font-size: 60%;
 }
@@ -469,7 +502,8 @@ P		{
   font-size: 80%;
   border-collapse: collapse; 
 }
-.calc td {
+
+.calc td, .calc th {
  border: 1px solid black;
 }
 
@@ -541,7 +575,7 @@ If you wish to save this subnetting for later, bookmark <a href="subnets.html" i
 
 </td>
 <td align="right">
-<a href="https://github.com/davidc/subnets"><img alt="Fork me on GitHub" src="https://github.blog/wp-content/uploads/2008/12/forkme_right_white_ffffff.png" style="right: 0;top: 0;position: absolute;" ></a>
+<a href="https://github.com/davidc/subnets"><img alt="Fork me on GitHub" src="https://github.blog/wp-content/uploads/2008/12/forkme_right_white_ffffff.png" style="right: 0;top: 0;position: absolute;"></a>
 </td>
 </tr>
 </table>
@@ -551,24 +585,15 @@ If you wish to save this subnetting for later, bookmark <a href="subnets.html" i
 <br>
 
 <table class="calc" cellspacing="0" cellpadding="2">
-<colgroup>
-<col id="col_subnet">
-<col id="col_netmask" style="display: none">
-<col id="col_range">
-<col id="col_useable">
-<col id="col_hosts">
-<col id="col_divide">
-<col id="col_join">
-</colgroup>
 <thead>
 <tr>
-<td>Subnet address</td>
-<td>Netmask</td>
-<td>Range of addresses</td>
-<td>Useable IPs</td>
-<td>Hosts</td>
-<td>Divide</td>
-<td id="joinHeader">Join</td>
+<th id="subnetHeader">Subnet address</th>
+<th id="netmaskHeader">Netmask</th>
+<th id="rangeHeader">Range of addresses</th>
+<th id="useableHeader">Useable IPs</th>
+<th id="hostsHeader">Hosts</th>
+<th id="divideHeader">Divide</th>
+<th id="joinHeader">Join</th>
 </tr>
 </thead>
 <tbody id="calcbody">
