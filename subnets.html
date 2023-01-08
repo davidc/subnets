@@ -370,7 +370,7 @@ function network_address(ip, mask)
 
 function subnet_addresses(mask)
 {
-  return 1<<(32-mask);
+  return 2**(32-mask);
 }
 
 function subnet_last_address(subnet, mask)
